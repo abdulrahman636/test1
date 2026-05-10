@@ -25,7 +25,6 @@
             from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* ضمان ظهور النافذة المنبثقة فوق كل شيء */
         .modal-backdrop {
             position: fixed;
             top: 0;
@@ -75,44 +74,37 @@
             </section>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Names -->
-                <div class="space-y-2">
-                    <label class="block text-gray-700 font-bold flex items-center gap-2 text-right">
+                <div class="space-y-2 text-right">
+                    <label class="block text-gray-700 font-bold flex items-center gap-2 justify-end">
+                        قائمة الأسماء (اسم في كل سطر)
                         <span class="bg-blue-100 text-blue-600 w-6 h-6 flex items-center justify-center rounded-full text-xs font-mono">1</span>
-                        قائمة الأسماء (اسم في كل سطر):
                     </label>
                     <textarea id="namesInput" rows="8" placeholder="الاسم الأول&#10;الاسم الثاني" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none bg-blue-50/30 custom-scrollbar text-right"></textarea>
                 </div>
 
-                <!-- Phones -->
-                <div class="space-y-2">
-                    <label class="block text-gray-700 font-bold flex items-center gap-2 text-right">
+                <div class="space-y-2 text-right">
+                    <label class="block text-gray-700 font-bold flex items-center gap-2 justify-end">
+                        أرقام الهواتف (بدون صفر البداية)
                         <span class="bg-green-100 text-green-600 w-6 h-6 flex items-center justify-center rounded-full text-xs font-mono">2</span>
-                        أرقام الهواتف (بدون 0 في البداية):
                     </label>
                     <textarea id="phonesInput" rows="8" placeholder="5xxxxxxxx&#10;5xxxxxxxx" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-400 outline-none bg-green-50/30 custom-scrollbar text-right"></textarea>
-                    <p class="text-[11px] text-emerald-600 font-bold text-right">سيتم إضافة 966 تلقائياً لكل رقم</p>
+                    <p class="text-[11px] text-emerald-600 font-bold">سيتم إضافة 966 تلقائياً لكل رقم</p>
                 </div>
             </div>
 
             <div id="validationMessage" class="hidden p-4 rounded-xl bg-red-50 text-red-700 text-sm border border-red-100 animate-fade-in text-right"></div>
 
             <button onclick="processData()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-2xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3 text-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
                 توليد قائمة الإرسال
             </button>
 
-            <!-- Results Section -->
+            <!-- Results -->
             <section id="resultSection" class="hidden animate-fade-in">
                 <div class="flex items-center justify-between border-b pb-4 mb-6">
-                    <h3 class="font-bold text-gray-800 text-xl italic underline decoration-emerald-500 underline-offset-8">جاهز للإرسال:</h3>
+                    <h3 class="font-bold text-gray-800 text-xl">جاهز للإرسال:</h3>
                     <span id="counter" class="bg-emerald-100 text-emerald-700 px-4 py-1 rounded-full font-bold text-sm"></span>
                 </div>
-                <div id="contactsList" class="grid grid-cols-1 gap-4">
-                    <!-- Cards will be injected here via JS -->
-                </div>
+                <div id="contactsList" class="grid grid-cols-1 gap-4"></div>
             </section>
         </div>
 
@@ -126,137 +118,99 @@
         </div>
     </div>
 
-    <!-- Modal Container -->
     <div id="modalContainer"></div>
 
-    <!-- Scripts -->
     <script>
         let currentPlatform = 'web';
+        let generatedData = [];
 
         function setPlatform(platform) {
             currentPlatform = platform;
-            const btnWeb = document.getElementById('btnWeb');
-            const btnMobile = document.getElementById('btnMobile');
-
-            if (platform === 'web') {
-                btnWeb.className = 'px-6 py-2 rounded-lg font-bold transition-all text-sm bg-white text-emerald-800 shadow-lg';
-                btnMobile.className = 'px-6 py-2 rounded-lg font-bold transition-all text-sm hover:bg-white/10 text-white';
-            } else {
-                btnMobile.className = 'px-6 py-2 rounded-lg font-bold transition-all text-sm bg-white text-emerald-800 shadow-lg';
-                btnWeb.className = 'px-6 py-2 rounded-lg font-bold transition-all text-sm hover:bg-white/10 text-white';
-            }
-            
-            if (!document.getElementById('resultSection').classList.contains('hidden')) {
-                processData();
-            }
+            document.getElementById('btnWeb').className = platform === 'web' ? 'px-6 py-2 rounded-lg font-bold transition-all text-sm bg-white text-emerald-800 shadow-lg' : 'px-6 py-2 rounded-lg font-bold transition-all text-sm hover:bg-white/10 text-white';
+            document.getElementById('btnMobile').className = platform === 'mobile' ? 'px-6 py-2 rounded-lg font-bold transition-all text-sm bg-white text-emerald-800 shadow-lg' : 'px-6 py-2 rounded-lg font-bold transition-all text-sm hover:bg-white/10 text-white';
+            if (generatedData.length > 0) renderList();
         }
 
         function processData() {
             const template = document.getElementById('messageTemplate').value;
             const namesRaw = document.getElementById('namesInput').value.trim();
             const phonesRaw = document.getElementById('phonesInput').value.trim();
-            const validationDiv = document.getElementById('validationMessage');
-            const listContainer = document.getElementById('contactsList');
-            const section = document.getElementById('resultSection');
-            const counterSpan = document.getElementById('counter');
-
-            validationDiv.classList.add('hidden');
-            listContainer.innerHTML = '';
             
             if (!namesRaw || !phonesRaw) {
-                showError("يرجى إدخال الأسماء والأرقام أولاً.");
+                showError("يرجى إدخال البيانات أولاً.");
                 return;
             }
 
             const names = namesRaw.split('\n').map(n => n.trim()).filter(n => n !== "");
-            let phones = phonesRaw.split('\n').map(p => p.trim().replace(/\s+/g, '')).filter(p => p !== "");
+            const rawPhones = phonesRaw.split('\n').map(p => p.trim().replace(/\s+/g, '')).filter(p => p !== "");
 
-            phones = phones.map(p => {
-                let clean = p.replace(/\D/g, ''); 
-                if (clean.startsWith('0')) clean = clean.substring(1);
-                if (!clean.startsWith('966') && clean.length > 0) clean = '966' + clean;
-                return clean;
-            });
-
-            if (names.length !== phones.length) {
-                showError(`تنبيه: عدد الأسماء (${names.length}) لا يتطابق مع عدد الأرقام (${phones.length}).`);
+            if (names.length !== rawPhones.length) {
+                showError(`تنبيه: عدد الأسماء (${names.length}) لا يطابق عدد الأرقام (${rawPhones.length}).`);
                 return;
             }
 
-            names.forEach((name, index) => {
-                const phone = phones[index];
-                const finalMessage = template.replace(/{الاسم}/g, name);
-                const encodedMessage = encodeURIComponent(finalMessage);
-                
-                const waUrl = currentPlatform === 'web' 
-                    ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`
-                    : `https://wa.me/${phone}?text=${encodedMessage}`;
-
-                const contactCard = document.createElement('div');
-                contactCard.className = "animate-fade-in group flex flex-col md:flex-row items-center justify-between bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all";
-                contactCard.style.animationDelay = `${index * 40}ms`;
-                
-                contactCard.innerHTML = `
-                    <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-auto text-right">
-                        <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-bold text-sm border border-emerald-100">
-                            ${index + 1}
-                        </div>
-                        <div>
-                            <span class="block font-bold text-gray-800 text-lg">${name}</span>
-                            <span class="text-xs text-gray-400 font-mono tracking-wider text-right">+${phone}</span>
-                        </div>
-                    </div>
-                    <div class="flex gap-3 w-full md:w-auto">
-                        <button onclick="openModal('${index}', '${name}', '${phone}', \`${finalMessage.replace(/`/g, '\\`')}\`)" class="flex-1 md:flex-none px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition text-sm font-bold border border-gray-200">
-                            معاينة
-                        </button>
-                        <a href="${waUrl}" target="_blank" onclick="markAsSent(this)" class="flex-1 md:flex-none px-8 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition font-bold text-center text-sm shadow-sm flex items-center justify-center gap-2">
-                            إرسال ${currentPlatform === 'web' ? 'ويب' : 'تطبيق'}
-                        </a>
-                    </div>
-                `;
-                listContainer.appendChild(contactCard);
+            generatedData = names.map((name, i) => {
+                let p = rawPhones[i].replace(/\D/g, '');
+                if (p.startsWith('0')) p = p.substring(1);
+                if (!p.startsWith('966')) p = '966' + p;
+                return { name, phone: p, msg: template.replace(/{الاسم}/g, name) };
             });
 
-            counterSpan.innerText = `العدد: ${names.length} شخص`;
+            renderList();
+        }
+
+        function renderList() {
+            const list = document.getElementById('contactsList');
+            const section = document.getElementById('resultSection');
+            list.innerHTML = '';
+            
+            generatedData.forEach((item, i) => {
+                const encodedMsg = encodeURIComponent(item.msg);
+                const url = currentPlatform === 'web' ? `https://web.whatsapp.com/send?phone=${item.phone}&text=${encodedMsg}` : `https://wa.me/${item.phone}?text=${encodedMsg}`;
+                
+                const card = document.createElement('div');
+                card.className = "flex flex-col md:flex-row items-center justify-between bg-white p-5 rounded-2xl border border-gray-100 shadow-sm animate-fade-in";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4 w-full md:w-auto text-right">
+                        <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-bold text-sm">${i+1}</div>
+                        <div>
+                            <span class="block font-bold text-gray-800 text-lg">${item.name}</span>
+                            <span class="text-xs text-gray-400 font-mono">+${item.phone}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
+                        <button onclick="openModal(${i})" class="flex-1 md:flex-none px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm">معاينة</button>
+                        <a href="${url}" target="_blank" onclick="markAsSent(this)" class="flex-1 md:flex-none px-8 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-center text-sm shadow-sm">إرسال</a>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+            document.getElementById('counter').innerText = `العدد: ${generatedData.length}`;
             section.classList.remove('hidden');
-            section.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function showError(msg) {
-            const div = document.getElementById('validationMessage');
-            div.innerText = msg;
-            div.classList.remove('hidden');
-        }
-
-        function openModal(id, name, phone, message) {
-            const modalContainer = document.getElementById('modalContainer');
-            modalContainer.innerHTML = `
-                <div id="modal-overlay" class="modal-backdrop animate-fade-in">
+        function openModal(index) {
+            const item = generatedData[index];
+            const modal = document.getElementById('modalContainer');
+            modal.innerHTML = `
+                <div class="modal-backdrop animate-fade-in" onclick="if(event.target === this) closeModal()">
                     <div class="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl relative overflow-hidden text-right">
-                        <!-- Modal Header -->
                         <div class="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <button onclick="closeModal()" class="bg-white p-3 rounded-full hover:bg-red-50 hover:text-red-600 transition shadow-sm border border-gray-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                            <button onclick="closeModal()" class="bg-white p-3 rounded-full hover:bg-red-50 border border-gray-200 shadow-sm transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                             <div class="text-right">
                                 <h4 class="font-bold text-2xl text-slate-800">معاينة الرسالة الموجهة</h4>
-                                <p class="text-emerald-600 font-bold mt-1 text-sm italic">الاسم: ${name} | الرقم: ${phone}</p>
+                                <p class="text-emerald-600 font-bold text-sm mt-1">الاسم: ${item.name} | الرقم: ${item.phone}</p>
                             </div>
                         </div>
-                        <!-- Modal Content -->
-                        <div class="p-10 overflow-y-auto custom-scrollbar flex-grow bg-white">
-                            <div class="bg-emerald-50/50 p-8 rounded-[1.5rem] text-slate-800 whitespace-pre-wrap text-xl leading-relaxed border border-emerald-100/50 italic min-h-[200px] text-right">
-${message}
+                        <div class="p-10 overflow-y-auto custom-scrollbar flex-grow">
+                            <div class="bg-emerald-50 p-8 rounded-[1.5rem] text-slate-800 whitespace-pre-wrap text-xl leading-relaxed border border-emerald-100 italic min-h-[200px]">
+${item.msg}
                             </div>
                         </div>
-                        <!-- Modal Footer -->
-                        <div class="p-8 border-t border-gray-100 bg-gray-50 flex justify-start">
-                            <button onclick="closeModal()" class="px-12 py-4 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all shadow-md text-lg">
-                                إغلاق النافذة
-                            </button>
+                        <div class="p-8 border-t border-gray-100 bg-gray-50">
+                            <button onclick="closeModal()" class="px-12 py-4 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition shadow-md text-lg">إغلاق النافذة</button>
                         </div>
                     </div>
                 </div>
@@ -270,9 +224,14 @@ ${message}
         }
 
         function markAsSent(el) {
-            el.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-            el.classList.add('bg-slate-400');
+            el.className = "flex-1 md:flex-none px-8 py-2.5 bg-slate-400 text-white rounded-xl font-bold text-center text-sm shadow-sm";
             el.innerHTML = 'تم الفتح ✓';
+        }
+
+        function showError(msg) {
+            const div = document.getElementById('validationMessage');
+            div.innerText = msg;
+            div.classList.remove('hidden');
         }
     </script>
 </body>
